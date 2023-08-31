@@ -1,0 +1,102 @@
+#define DETECT 12 // pin 2 for  sensor
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x27 for a 16 chars and 2 line display
+
+
+byte mag_sizes[] = {25, 30, 6};
+byte mag_size_selected = 0;
+
+byte ammo_max = mag_sizes[mag_size_selected];
+byte ammo_current = ammo_max;
+byte ammo_prev = ammo_current;
+
+byte one_third_ammo = ammo_max / 3;
+byte ammo_critical = one_third_ammo;
+byte ammo_warning = one_third_ammo * 2;
+
+byte var = 0;
+
+void repeatString(unsigned int count)
+{
+    // ... USES POST DECREMENT ...
+    // <https://en.wikipedia.org/wiki/Increment_and_decrement_operators>
+
+    while ( count-- )
+    {
+        Serial.print("*");
+    }
+
+    Serial.println();
+}
+
+void count_ammo_down() {
+    ammo_prev = ammo_current;
+    if (ammo_current > 0 ) {
+        ammo_current--;
+    } else {
+        ammo_current = 0;
+    }
+    Serial.print("Ammo: ");
+    Serial.println(ammo_current);
+}
+
+
+void reload() {
+    Serial.println("Reloading");
+    ammo_current = ammo_max;
+    ammo_prev = ammo_current;
+    display_ammo();
+}
+
+
+void display_ammo() {
+    String ammo_current_display = "";
+    lcd.setCursor(0,0);
+
+    if (ammo_current < 10 && ammo_current > 0) {
+        ammo_current_display = "0" + String(ammo_current);
+    } else if (ammo_current == 0) {
+        lcd.clear();
+        lcd.setCursor(3,1);
+        ammo_current_display = "EMPTY";
+    } else {
+        ammo_current_display = String(ammo_current);
+    }
+    Serial.println(ammo_current_display);
+    lcd.print(ammo_current_display);
+
+    ammo_prev = ammo_current;
+}
+
+
+
+
+void setup() {
+  Serial.begin(9600);
+  Serial.println("Robojax.com Laser Module Test");
+  pinMode(DETECT, INPUT);//define detect input pin
+  lcd.init();                      // initialize the lcd 
+  lcd.init();
+  lcd.backlight();
+
+}
+
+
+
+void loop() { 
+  int detected = digitalRead(DETECT);// read Laser sensor
+                    if (detected == LOW){
+                      while (var < 1) {
+                        count_ammo_down();
+                        var++;
+                      }
+                    Serial.println("No laser");
+                    display_ammo();
+                    } else {
+                      Serial.println("Detected!");
+                      display_ammo();
+                      var = 0;
+                    }
+}
